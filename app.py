@@ -28,6 +28,15 @@ def fetch_tw_stock_history(symbol: str) -> pd.DataFrame:
     return df.sort_index()
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_tw_stock_info(symbol: str) -> dict:
+    try:
+        info = yf.Ticker(symbol).info
+        return info if isinstance(info, dict) else {}
+    except Exception:
+        return {}
+
+
 def add_moving_averages(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out["MA5"] = out["Close"].rolling(window=5, min_periods=1).mean()
@@ -130,12 +139,9 @@ def main() -> None:
 
     data = add_moving_averages(raw)
     name = sym
-    try:
-        info = yf.Ticker(sym).info
-        if isinstance(info, dict) and info.get("longName"):
-            name = str(info["longName"])
-    except Exception:
-        pass
+    info = fetch_tw_stock_info(sym)
+    if info.get("longName"):
+        name = str(info["longName"])
 
     st.subheader(f"{name}（{sym}）")
     c1, c2, c3, c4 = st.columns(4)
